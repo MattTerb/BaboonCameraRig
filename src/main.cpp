@@ -48,13 +48,13 @@ char str[20];   // Must hold longest field with delimiter and zero byte.
 char *ptr;      // Test for valid field.
 char delim = 0; // Delimiter from previous line. Start with no delimiter.
 
-const long eventTime = 1000 / 90; //ms    Data logging intervals
+const long eventTime = 1000000 / 90; //us    Data logging intervals
 
 unsigned long previousTime = 0;
 
-const int beepInterval = 200; // Min gap between beeps
+const int beepInterval = 200000; // Minimum gap between beeps
 
-const long regularBeepTime = 10000; // Beep every 10s
+const long regularBeepTime = 10000000; // Beep every 10s
 
 byte buzzerState = LOW;
 
@@ -109,7 +109,7 @@ size_t readField(File *file, char *str, size_t size, const char *delim)
 void setup()
 {
 
-  Serial.begin(38400);
+  Serial.begin(115200);
 
   while (!Serial)
   {
@@ -207,9 +207,9 @@ void setup()
 void loop()
 {
 
-  currentMillis = millis();
+  currentMillis = micros();
 
-  unsigned long currentBeepTime = millis();
+  unsigned long currentBeepTime = micros();
 
   updateBuzzerState();
 
@@ -218,7 +218,7 @@ void loop()
     resetPos(); // If receive pulse from OUT Z then set position to 0
   }
 
-  unsigned long currentTime = millis();
+  unsigned long currentTime = micros();
 
   if ((millis() - lastDebounceTime) > debounceDelay)
   {
@@ -413,7 +413,7 @@ void saveEncoderData() // Save encoder position to sd card
     //    Serial.print("Writing to encoder.csv...");
     myFile.print(dataSet);
     myFile.print(",");
-    myFile.print(millis());
+    myFile.print(micros());
     myFile.print(",");
     myFile.println(angle);
     // close the file:
