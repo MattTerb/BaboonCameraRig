@@ -48,11 +48,11 @@ char str[20];   // Must hold longest field with delimiter and zero byte.
 char *ptr;      // Test for valid field.
 char delim = 0; // Delimiter from previous line. Start with no delimiter.
 
-const long eventTime = 1000000 / 90; //us    Data logging intervals
+const long eventTime = (1000000 / 90); //us    Data logging intervals
 
 unsigned long previousTime = 0;
 
-const int beepInterval = 200000; // Minimum gap between beeps
+const long beepInterval = 200000; // Minimum gap between beeps
 
 const long regularBeepTime = 10000000; // Beep every 10s
 
@@ -72,6 +72,8 @@ unsigned long currentMillis = 0; // stores the value of millis() in each iterati
 unsigned long previousBeepMillis = 0;
 
 unsigned long previousBeepTime = 0;
+
+long newPosition;
 
 Encoder myEnc(OUT_A, OUT_B);
 
@@ -301,7 +303,7 @@ void updateBuzzerState() // Continously check and update state of buzzer
     else
     {
 
-      if (currentMillis - previousBeepMillis > durArray[beepCount - 1])
+      if (currentMillis - previousBeepMillis > durArray[beepCount - 1]*1000)
       {
 
         // Serial.println("Beep Off");
@@ -353,7 +355,7 @@ void startDataSet() // Save column titles to file
   if (myFile)
   {
     // Serial.print("Writing to encoder.csv...");
-    myFile.println("Dataset Number,Time,Rotation Angle"); // Write column title to file
+    myFile.println("Dataset Number,Time,Rotation"); // Write column title to file
     // myFile.println(dataSet);
     // close the file:
     myFile.close();
@@ -393,16 +395,17 @@ void endDataSet() // Write dataset number to dataset file
 void readEncoder() // Read encoder value from encoder and convert to degrees
 {
 
-  float newPosition = myEnc.read();
+  newPosition = myEnc.read();
 
   angle = ((newPosition / 4096) * 360) / 3;
-  // Serial.print(millis());
-  // Serial.print(",");
-  // Serial.println(angle);
+  // Serial.print(newPosition/4);
+  // Serial.print(" === ");
+  // Serial.println(newPosition);
 
   if (abs(round(angle)) == 360){
     fullRev = HIGH;
   }
+
 }
 
 void saveEncoderData() // Save encoder position to sd card
@@ -415,7 +418,7 @@ void saveEncoderData() // Save encoder position to sd card
     myFile.print(",");
     myFile.print(micros());
     myFile.print(",");
-    myFile.println(angle);
+    myFile.println(newPosition);
     // close the file:
     myFile.close();
     // Serial.println("done.");
