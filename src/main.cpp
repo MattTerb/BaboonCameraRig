@@ -251,8 +251,8 @@ void loop()
 
       digitalWrite(DATA_LED, LOW);
 
-      beep(2500, 350, false);
-      beep(2500, 350, false);
+      beep(2750, 550, false);
+      beep(2750, 550, false);
 
       endDataSet();
     }
