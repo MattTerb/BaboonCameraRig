@@ -85,6 +85,13 @@ byte startWriting = LOW;
 
 byte toggle = LOW;
 
+// Double buffer variables
+static volatile char buffer[2][512];
+static const int BUFFLEN = sizeof(buffer[0]);
+static const unsigned char EMPTY = 0xff;
+static volatile unsigned char inbuffer = 0;
+static volatile unsigned char outbuffer = EMPTY;
+
 // Function Declarations
 void updateBuzzerState();
 void beep(unsigned int freq, unsigned long duration, bool regularBeep);
@@ -125,9 +132,8 @@ void setup()
   digitalWrite(ERROR_LED, LOW);
   digitalWrite(DATA_LED, LOW);
 
-  //pinMode(OUT_Z, INPUT_PULLUP);
-    pinMode(OUT_Z, OUTPUT);
-
+  pinMode(OUT_Z, INPUT_PULLUP);
+  // pinMode(OUT_Z, OUTPUT);
 
   pinMode(START, INPUT_PULLUP); // Start
   pinMode(STOP, INPUT_PULLUP);  // Stop
@@ -167,7 +173,7 @@ void setup()
     ; // wait for serial port to connect. Needed for native USB port only
   }
 
-  //Serial.print("Initializing SD card...");
+ // Serial.print("Initializing SD card...");
 
   if (!SD.begin(CS))
   {
@@ -176,7 +182,7 @@ void setup()
     return;
   }
 
-  // Serial.println("initialization done.");
+  Serial.println("initialization done.");
 
   if (SD.exists("dataset.csv"))
   {
@@ -245,6 +251,12 @@ void setup()
 void loop()
 {
 
+  // if ((writeToFile == true) && (startWriting == HIGH))
+  // {
+  //   saveEncoderData();
+  //   Serial.println("Start Saving");
+  // }
+
   currentMillis = micros();
 
   unsigned long currentBeepTime = micros();
@@ -256,7 +268,7 @@ void loop()
     resetPos(); // If receive pulse from OUT Z then set position to 0
   }
 
-  unsigned long currentTime = micros();
+  //unsigned long currentTime = micros();
 
   if ((millis() - lastDebounceTime) > debounceDelay)
   {
@@ -294,21 +306,11 @@ void loop()
     }
   }
 
-  if (currentTime - previousTime >= eventTime)
-  {
+  // if (currentTime - previousTime >= eventTime)
+  // {
 
-    //readEncoder();
-  //     if (toggle == LOW) {
-
-  //   digitalWrite(OUT_Z, HIGH);
-  //   toggle = HIGH;
-  // } else {
-  //   digitalWrite(OUT_Z, LOW);
-
+  //   previousTime += eventTime;
   // }
-
-    previousTime += eventTime;
-  }
 
   if (currentBeepTime - previousBeepTime >= regularBeepTime)
   {
@@ -319,25 +321,30 @@ void loop()
     //previousBeepTime = currentBeepTime;
     previousBeepTime += regularBeepTime;
   }
+
+      Serial.println("loop");
+
 }
 
 ISR(TIMER1_COMPA_vect)
 { //Interrupt at freq of 90Hz to save data to SD
 
-  if (toggle == LOW) {
+  // if (toggle == LOW) {
 
-    digitalWrite(OUT_Z, HIGH);
-    toggle = HIGH;
-  } else {
-    digitalWrite(OUT_Z, LOW);
+  //     digitalWrite(OUT_Z, HIGH);
+  //     toggle = HIGH;
+  //   } else {
+  //    digitalWrite(OUT_Z, LOW);
+  //     toggle = LOW;
 
-  }
+  //   }
 
-  if ((writeToFile == true) && (startWriting == HIGH))
-  {
-    //  Serial.println("start writing");
-   // saveEncoderData();
-  }
+  // if ((writeToFile == true) && (startWriting == HIGH))
+  // {
+  //Serial.println("start writing");
+  // saveEncoderData();
+  //readEncoder();
+  //}
 }
 
 void updateBuzzerState() // Continously check and update state of buzzer
@@ -472,27 +479,62 @@ void readEncoder() // Read encoder value from encoder and convert to degrees
   {
     fullRev = HIGH;
   }
+
+  if ((writeToFile == true) && (startWriting == HIGH))
+  {
+    static int count = 0;
+
+    // Write to current buffer
+    buffer[inbuffer][count] = dataSet;
+    count++;
+
+    buffer[inbuffer][count] = ',';
+    count++;
+
+    buffer[inbuffer][count] = micros();
+    count++;
+    buffer[inbuffer][count] = ',';
+    count++;
+    buffer[inbuffer][count] = newPosition;
+    count++;
+
+    // If buffer full...
+    if (count >= BUFFLEN)
+    {
+      // Signal to loop() that data available (not EMPTY)
+      outbuffer = inbuffer;
+
+      // Toggle input buffer
+      inbuffer = inbuffer == 0 ? 1 : 0;
+      count = 0;
+    }
+  }
 }
 
 void saveEncoderData() // Save encoder position to sd card
 {
-  myFile = SD.open("encoder.csv", FILE_WRITE);
-  if (myFile)
+
+  // If buffer available...
+  if (outbuffer != EMPTY)
   {
-    //   Serial.print("Writing to encoder.csv...");
-    myFile.print(dataSet);
-    myFile.print(",");
-    myFile.print(micros());
-    myFile.print(",");
-    myFile.println(newPosition);
-    // close the file:
-    myFile.close();
-    // Serial.println("done.");
-  }
-  else
-  {
-    // if the file didn't open, print an error:
-    //  Serial.println("error opening encoder.csv");
-    digitalWrite(ERROR_LED, HIGH);
+    // Write buffer
+    myFile = SD.open("encoder.csv", FILE_WRITE);
+    if (myFile)
+    {
+      for (int i = 0; i < BUFFLEN; i++)
+      {
+        myFile.println(buffer[outbuffer][i]);
+      }
+      myFile.close();
+
+      // Set the buffer to empty
+      outbuffer = EMPTY;
+    }
+    else
+    {
+      // if the file didn't open, print an error:
+      Serial.println("error opening encoder.csv");
+      digitalWrite(ERROR_LED, HIGH);
+    }
   }
 }
