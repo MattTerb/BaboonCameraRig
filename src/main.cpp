@@ -39,6 +39,10 @@ void index_ISR()
 long lastDebounceTime = 0;
 const int debounceDelay = 500; // ms
 
+const int startBeepFreq = 3500;
+const int stopBeepFreq = 2500;
+const int regularBeepFreq = 2000;
+
 float angle = 0;
 
 int dataSet;
@@ -231,7 +235,7 @@ void loop()
       // Serial.println("START");
       lastDebounceTime = millis();
 
-      beep(3500, 500, false);
+      beep(startBeepFreq, 500, false);
 
       writeToFile = true;
       if (digitalRead(ERROR_LED) == LOW)
@@ -251,8 +255,8 @@ void loop()
 
       digitalWrite(DATA_LED, LOW);
 
-      beep(2750, 550, false);
-      beep(2750, 550, false);
+      beep(stopBeepFreq, 550, false);
+      beep(stopBeepFreq, 550, false);
 
       endDataSet();
     }
@@ -267,16 +271,20 @@ void loop()
     {
       saveEncoderData();
     }
-    previousTime = currentTime;
+    //previousTime = currentTime;
+        previousTime += eventTime;
+
   }
 
   if (currentBeepTime - previousBeepTime >= regularBeepTime)
   {
 
-    beep(2000, 800, true);
+    beep(regularBeepFreq, 800, true);
     // Serial.println("Beep");
 
-    previousBeepTime = currentBeepTime;
+    //previousBeepTime = currentBeepTime;
+        previousBeepTime += regularBeepTime;
+
   }
 }
 
@@ -297,7 +305,9 @@ void updateBuzzerState() // Continously check and update state of buzzer
         buzzerState = HIGH;
         tone(BUZZER, freqArray[beepCount - 1], durArray[beepCount - 1]); // Play beep
 
-        previousBeepMillis = currentMillis;
+        //previousBeepMillis = currentMillis;
+                previousBeepMillis += beepInterval;
+
       }
     }
     else
@@ -310,7 +320,9 @@ void updateBuzzerState() // Continously check and update state of buzzer
 
         buzzerState = LOW;
         beepCount -= 1; // Remove beep from schedule
-        previousBeepMillis = currentMillis;
+        //previousBeepMillis = currentMillis;
+                previousBeepMillis += durArray[beepCount - 1]*1000;
+
       }
     }
   }
