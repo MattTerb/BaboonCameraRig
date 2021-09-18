@@ -87,6 +87,8 @@ byte toggle = LOW;
 
 unsigned int writeCount = 0;
 
+//char fileName[15] = {'\0'};
+
 // Function Declarations
 void updateBuzzerState();
 void beep(unsigned int freq, unsigned long duration, bool regularBeep);
@@ -95,6 +97,8 @@ void startDataSet();
 void endDataSet();
 void readEncoder();
 void saveEncoderData();
+void getFileName(unsigned int dataSet);
+
 
 // Read last entry of the file
 size_t readField(File *file, char *str, size_t size, const char *delim)
@@ -154,7 +158,7 @@ void setup()
 
   TCNT1 = 0; //initialize counter value to 0;
   // set timer count for 90hz increments
-  OCR1A = 693; // = (16*10^6) / (90*256) - 1
+  OCR1A = 694; // = (16*10^6) / (90*256) - 1 (693 or 694)
   // enable timer compare interrupt
   TIMSK1 |= (1 << OCIE1A);
 
@@ -168,11 +172,11 @@ void setup()
     ; // wait for serial port to connect. Needed for native USB port only
   }
 
-  // Serial.print("Initializing SD card...");
+   //Serial.print("Initializing SD card...");
 
   if (!SD.begin(CS))
   {
-    // Serial.println("initialization failed!");
+  //   Serial.println("initialization failed!");
     digitalWrite(ERROR_LED, HIGH);
     return;
   }
@@ -402,27 +406,39 @@ void resetPos() // Set position to 0
   }
 }
 
+void getFileName(unsigned int dataSet)
+{
+
+  // strcpy (fileName, "");
+  // sprintf(fileName, "encoder%003d.csv", dataSet);
+}
+
+
 void startDataSet() // Save column titles to file
 {
 
-  myFile = SD.open("encoder.csv", FILE_WRITE);
-  if (myFile)
-  {
-    //  Serial.print("Writing to encoder.csv...");
-    myFile.println("Dataset Number,Time,Rotation"); // Write column title to file
-    // myFile.println(dataSet);
-    // close the file:
-    myFile.close();
-    //  Serial.println("done.");
+  //getFileName(dataSet);
 
-    startWriting = HIGH;
-  }
-  else
-  {
-    // if the file didn't open, print an error:
-    // Serial.println("error opening encoder.csv");
-    digitalWrite(ERROR_LED, HIGH);
-  }
+  //Serial.println(fileName);
+
+  // myFile = SD.open(fileName, FILE_WRITE);
+  // if (myFile)
+  // {
+  //   //  Serial.print("Writing to encoder.csv...");
+  //   myFile.println("Dataset Number,Time,Rotation"); // Write column title to file
+  //   // myFile.println(dataSet);
+  //   // close the file:
+  //   myFile.close();
+  //   //  Serial.println("done.");
+
+     startWriting = HIGH;
+  // }
+  // else
+  // {
+  //   // if the file didn't open, print an error:
+  //    Serial.println("START error opening encoder.csv");
+  //   digitalWrite(ERROR_LED, HIGH);
+  // }
 }
 
 void endDataSet() // Write dataset number to dataset file
@@ -468,8 +484,14 @@ void readEncoder() // Read encoder value from encoder and convert to degrees
 
 void saveEncoderData() // Save encoder position to sd card
 {
+    // getFileName(dataSet);
+    // Serial.print("SAVE ");
+
+//Serial.println(fileName);
 if (writeCount == 0){
-  myFile = SD.open("encoder.csv", O_CREAT | O_APPEND | O_WRITE);
+   myFile = SD.open("encoder.csv", O_CREAT | O_APPEND | O_WRITE);
+
+  //Serial.println("OPEN FILE");
 }
   if (myFile)
   {
@@ -493,7 +515,9 @@ if (writeCount == 0){
   else
   {
     // if the file didn't open, print an error:
-   // Serial.println("error opening encoder.csv");
+        Serial.print(writeCount);
+
+    Serial.println("SAVE error opening encoder.csv");
     digitalWrite(ERROR_LED, HIGH);
   }
 }
