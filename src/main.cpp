@@ -87,7 +87,7 @@ byte toggle = LOW;
 
 unsigned int writeCount = 0;
 
-char fileName[] = "0000000000.csv";
+//char fileName[] = "0000000000.csv";
 
 // Function Declarations
 void updateBuzzerState();
@@ -97,7 +97,7 @@ void startDataSet();
 void endDataSet();
 void readEncoder();
 void saveEncoderData();
-void getFileName(unsigned int dataSet);
+//void getFileName(unsigned int dataSet);
 
 // Read last entry of the file
 size_t readField(File *file, char *str, size_t size, const char *delim)
@@ -404,28 +404,28 @@ void resetPos() // Set position to 0
   }
 }
 
-void getFileName(unsigned int dataSet)
-{
+// void getFileName(unsigned int dataSet)
+// {
 
-  //memset (fileName, 0, sizeof(fileName));
-  sprintf(fileName, "encoder%03d.csv", dataSet);
-}
+//   //memset (fileName, 0, sizeof(fileName));
+//   sprintf(fileName, "encoder%03d.csv", dataSet);
+// }
 
 void startDataSet() // Save column titles to file
 {
 
   writeCount = 0;
-  getFileName(dataSet);
+ // getFileName(dataSet);
 
-  Serial.print("Filename: ");
+  // Serial.print("Filename: ");
 
-  Serial.println(fileName);
+  // Serial.println(fileName);
 
-  myFile = SD.open(fileName, FILE_WRITE);
+  myFile = SD.open("encoder.csv", FILE_WRITE);
   if (myFile)
   {
     //  Serial.print("Writing to encoder.csv...");
-    myFile.println("Time,Rotation"); // Write column title to file
+    myFile.println("Dataset Number,Time,Rotation"); // Write column title to file
     // myFile.println(dataSet);
     // close the file:
     myFile.close();
@@ -496,12 +496,14 @@ void saveEncoderData() // Save encoder position to sd card
   //Serial.println(fileName);
   if (writeCount == 0)
   {
-    myFile = SD.open(fileName, O_CREAT | O_APPEND | O_WRITE);
+    myFile = SD.open("encoder.csv", O_CREAT | O_APPEND | O_WRITE);
 
     //Serial.println("OPEN FILE");
   }
   if (myFile)
   {
+    myFile.print(dataSet);
+    myFile.print(',');
     myFile.print(micros());
     myFile.print(',');
     myFile.println(newPosition);
