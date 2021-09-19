@@ -45,7 +45,7 @@ const int regularBeepFreq = 2000;
 
 float angle = 0;
 
-int dataSet;
+unsigned int dataSet;
 
 size_t n;       // Length of returned field with delimiter.
 char str[20];   // Must hold longest field with delimiter and zero byte.
@@ -87,7 +87,7 @@ byte toggle = LOW;
 
 unsigned int writeCount = 0;
 
-//char fileName[15] = {'\0'};
+char fileName[] = "0000000000.csv";
 
 // Function Declarations
 void updateBuzzerState();
@@ -98,7 +98,6 @@ void endDataSet();
 void readEncoder();
 void saveEncoderData();
 void getFileName(unsigned int dataSet);
-
 
 // Read last entry of the file
 size_t readField(File *file, char *str, size_t size, const char *delim)
@@ -141,7 +140,7 @@ void setup()
 
   // TIMER SETUP- the timer interrupt allows preceise timed measurements of the reed switch
   //for mor info about configuration of arduino timers see http://arduino.cc/playground/Code/Timer1
-  //cli();//stop interrupts
+  cli(); //stop interrupts
 
   //set timer1 interrupt at 90Hz
   TCCR1A = 0; // set entire TCCR1A register to 0
@@ -172,11 +171,11 @@ void setup()
     ; // wait for serial port to connect. Needed for native USB port only
   }
 
-   //Serial.print("Initializing SD card...");
+  //Serial.print("Initializing SD card...");
 
   if (!SD.begin(CS))
   {
-  //   Serial.println("initialization failed!");
+    //   Serial.println("initialization failed!");
     digitalWrite(ERROR_LED, HIGH);
     return;
   }
@@ -269,7 +268,7 @@ void loop()
     if (digitalRead(START) == LOW) // Start logging data
     {
 
-      //   Serial.println("START");
+      Serial.println("START");
       lastDebounceTime = millis();
 
       beep(startBeepFreq, 500, false);
@@ -278,14 +277,14 @@ void loop()
       if (digitalRead(ERROR_LED) == LOW)
       {
         digitalWrite(DATA_LED, HIGH);
+        startDataSet();
       }
-      startDataSet();
     }
 
     if (digitalRead(STOP) == LOW) // Stop logging data
     {
 
-      // Serial.println("STOP");
+      Serial.println("STOP");
       lastDebounceTime = millis();
 
       writeToFile = false;
@@ -311,8 +310,8 @@ void loop()
     beep(regularBeepFreq, 800, true);
     // Serial.println("Beep");
 
-    //previousBeepTime = currentBeepTime;
-    previousBeepTime += regularBeepTime;
+    previousBeepTime = currentBeepTime;
+    // previousBeepTime += regularBeepTime;
   }
 }
 
@@ -348,13 +347,12 @@ void updateBuzzerState() // Continously check and update state of buzzer
       if (currentMillis - previousBeepMillis > beepInterval)
       {
 
-        // Serial.println("Beep On");
+        Serial.println("Beep");
 
         buzzerState = HIGH;
-        tone(BUZZER, freqArray[beepCount - 1], durArray[beepCount - 1]); // Play beep
+       // tone(BUZZER, freqArray[beepCount - 1], durArray[beepCount - 1]); // Play beep
 
-        //previousBeepMillis = currentMillis;
-        previousBeepMillis += beepInterval;
+        previousBeepMillis = currentMillis;
       }
     }
     else
@@ -363,12 +361,12 @@ void updateBuzzerState() // Continously check and update state of buzzer
       if (currentMillis - previousBeepMillis > durArray[beepCount - 1] * 1000)
       {
 
-        // Serial.println("Beep Off");
+        //Serial.println("Beep Off");
 
         buzzerState = LOW;
         beepCount -= 1; // Remove beep from schedule
-                        //previousBeepMillis = currentMillis;
-        previousBeepMillis += durArray[beepCount - 1] * 1000;
+
+        previousBeepMillis = currentMillis;
       }
     }
   }
@@ -409,41 +407,50 @@ void resetPos() // Set position to 0
 void getFileName(unsigned int dataSet)
 {
 
-  // strcpy (fileName, "");
-  // sprintf(fileName, "encoder%003d.csv", dataSet);
+  //memset (fileName, 0, sizeof(fileName));
+  sprintf(fileName, "encoder%03d.csv", dataSet);
 }
-
 
 void startDataSet() // Save column titles to file
 {
 
-  //getFileName(dataSet);
+  writeCount = 0;
+  getFileName(dataSet);
 
-  //Serial.println(fileName);
+  Serial.print("Filename: ");
 
-  // myFile = SD.open(fileName, FILE_WRITE);
-  // if (myFile)
-  // {
-  //   //  Serial.print("Writing to encoder.csv...");
-  //   myFile.println("Dataset Number,Time,Rotation"); // Write column title to file
-  //   // myFile.println(dataSet);
-  //   // close the file:
-  //   myFile.close();
-  //   //  Serial.println("done.");
+  Serial.println(fileName);
 
-     startWriting = HIGH;
-  // }
-  // else
-  // {
-  //   // if the file didn't open, print an error:
-  //    Serial.println("START error opening encoder.csv");
-  //   digitalWrite(ERROR_LED, HIGH);
-  // }
+  myFile = SD.open(fileName, FILE_WRITE);
+  if (myFile)
+  {
+    //  Serial.print("Writing to encoder.csv...");
+    myFile.println("Time,Rotation"); // Write column title to file
+    // myFile.println(dataSet);
+    // close the file:
+    myFile.close();
+    //  Serial.println("done.");
+
+    startWriting = HIGH;
+  }
+  else
+  {
+    // if the file didn't open, print an error:
+    Serial.println("START error opening encoder.csv");
+    digitalWrite(ERROR_LED, HIGH);
+  }
 }
 
 void endDataSet() // Write dataset number to dataset file
 {
 
+  if (myFile)
+  {
+    myFile.close();
+  }
+  startWriting = LOW;
+
+  writeCount = 0;
   dataSet += 1;
 
   // Write Dataset Number
@@ -455,7 +462,6 @@ void endDataSet() // Write dataset number to dataset file
     // close the file:
     myFile.close();
 
-    startWriting = LOW;
     //  Serial.println("done.");
   }
   else
@@ -484,19 +490,18 @@ void readEncoder() // Read encoder value from encoder and convert to degrees
 
 void saveEncoderData() // Save encoder position to sd card
 {
-    // getFileName(dataSet);
-    // Serial.print("SAVE ");
+  //  getFileName(dataSet);
+  //  Serial.print("SAVE ");
 
-//Serial.println(fileName);
-if (writeCount == 0){
-   myFile = SD.open("encoder.csv", O_CREAT | O_APPEND | O_WRITE);
+  //Serial.println(fileName);
+  if (writeCount == 0)
+  {
+    myFile = SD.open(fileName, O_CREAT | O_APPEND | O_WRITE);
 
-  //Serial.println("OPEN FILE");
-}
+    //Serial.println("OPEN FILE");
+  }
   if (myFile)
   {
-    myFile.print(dataSet);
-    myFile.print(',');
     myFile.print(micros());
     myFile.print(',');
     myFile.println(newPosition);
@@ -515,7 +520,7 @@ if (writeCount == 0){
   else
   {
     // if the file didn't open, print an error:
-        Serial.print(writeCount);
+    Serial.print(writeCount);
 
     Serial.println("SAVE error opening encoder.csv");
     digitalWrite(ERROR_LED, HIGH);
