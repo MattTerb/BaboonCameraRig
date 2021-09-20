@@ -370,7 +370,7 @@ void resetPos() // Set position to 0
     fullRev = LOW;
     myEnc.write(0); // Set encoder to 0
     index_triggered = false;
-    beep(1500, 200, false); // Beep when at origin
+    beep(1800, 200, false); // Beep when at origin
   }
 }
 
