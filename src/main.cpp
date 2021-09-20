@@ -52,10 +52,6 @@ char str[20];   // Must hold longest field with delimiter and zero byte.
 char *ptr;      // Test for valid field.
 char delim = 0; // Delimiter from previous line. Start with no delimiter.
 
-const long eventTime = (1000000 / 90); //us    Data logging intervals
-
-unsigned long previousTime = 0;
-
 const long beepInterval = 200000; // Minimum gap between beeps
 
 const long regularBeepTime = 10000000; // Beep every 10s
@@ -83,11 +79,8 @@ Encoder myEnc(OUT_A, OUT_B);
 
 byte startWriting = LOW;
 
-byte toggle = LOW;
-
 unsigned int writeCount = 0;
 
-//char fileName[] = "0000000000.csv";
 
 // Function Declarations
 void updateBuzzerState();
@@ -97,7 +90,6 @@ void startDataSet();
 void endDataSet();
 void readEncoder();
 void saveEncoderData();
-//void getFileName(unsigned int dataSet);
 
 // Read last entry of the file
 size_t readField(File *file, char *str, size_t size, const char *delim)
@@ -140,7 +132,7 @@ void setup()
 
   // TIMER SETUP- the timer interrupt allows preceise timed measurements of the reed switch
   //for mor info about configuration of arduino timers see http://arduino.cc/playground/Code/Timer1
-  cli(); //stop interrupts
+  //cli(); //stop interrupts
 
   //set timer1 interrupt at 90Hz
   TCCR1A = 0; // set entire TCCR1A register to 0
@@ -211,10 +203,6 @@ void setup()
       delim = *ptr;
     }
 
-    // Serial.println("Data Set value form file: ");
-    // Serial.print(dataSet);
-    // Serial.println();
-    // Serial.println("Done");
     myFile.close(); // Close file to save data
   }
   else
@@ -243,7 +231,6 @@ void setup()
   }
 
   attachInterrupt(digitalPinToInterrupt(OUT_Z), index_ISR, RISING); // Add interrupt for detecting origin
-  // Serial.println("Rotation in Degrees:");
 }
 
 void loop()
@@ -260,7 +247,6 @@ void loop()
     resetPos(); // If receive pulse from OUT Z then set position to 0
   }
 
-  //unsigned long currentTime = micros();
 
   if ((millis() - lastDebounceTime) > debounceDelay)
   {
@@ -298,12 +284,6 @@ void loop()
     }
   }
 
-  // if (currentTime - previousTime >= eventTime)
-  // {
-
-  //   previousTime += eventTime;
-  // }
-
   if (currentBeepTime - previousBeepTime >= regularBeepTime)
   {
 
@@ -311,22 +291,12 @@ void loop()
     // Serial.println("Beep");
 
     previousBeepTime = currentBeepTime;
-    // previousBeepTime += regularBeepTime;
   }
 }
 
 ISR(TIMER1_COMPA_vect)
 { //Interrupt at freq of 90Hz to save data to SD
 
-  // if (toggle == LOW) {
-
-  //     digitalWrite(OUT_Z, HIGH);
-  //     toggle = HIGH;
-  //   } else {
-  //    digitalWrite(OUT_Z, LOW);
-  //     toggle = LOW;
-
-  //   }
   readEncoder();
 
   if ((writeToFile == true) && (startWriting == HIGH))
@@ -350,7 +320,7 @@ void updateBuzzerState() // Continously check and update state of buzzer
         Serial.println("Beep");
 
         buzzerState = HIGH;
-       // tone(BUZZER, freqArray[beepCount - 1], durArray[beepCount - 1]); // Play beep
+        tone(BUZZER, freqArray[beepCount - 1], durArray[beepCount - 1]); // Play beep
 
         previousBeepMillis = currentMillis;
       }
@@ -400,33 +370,20 @@ void resetPos() // Set position to 0
     fullRev = LOW;
     myEnc.write(0); // Set encoder to 0
     index_triggered = false;
-    beep(2000, 200, false); // Beep when at origin
+    beep(1500, 200, false); // Beep when at origin
   }
 }
-
-// void getFileName(unsigned int dataSet)
-// {
-
-//   //memset (fileName, 0, sizeof(fileName));
-//   sprintf(fileName, "encoder%03d.csv", dataSet);
-// }
 
 void startDataSet() // Save column titles to file
 {
 
   writeCount = 0;
- // getFileName(dataSet);
-
-  // Serial.print("Filename: ");
-
-  // Serial.println(fileName);
 
   myFile = SD.open("encoder.csv", FILE_WRITE);
   if (myFile)
   {
     //  Serial.print("Writing to encoder.csv...");
     myFile.println("Dataset Number,Time,Rotation"); // Write column title to file
-    // myFile.println(dataSet);
     // close the file:
     myFile.close();
     //  Serial.println("done.");
@@ -478,9 +435,6 @@ void readEncoder() // Read encoder value from encoder and convert to degrees
   newPosition = myEnc.read();
 
   angle = ((newPosition / 4096) * 360) / 3;
-  // Serial.print(newPosition/4);
-  // Serial.print(" === ");
-  // Serial.println(newPosition);
 
   if (abs(round(angle)) == 360)
   {
@@ -490,15 +444,10 @@ void readEncoder() // Read encoder value from encoder and convert to degrees
 
 void saveEncoderData() // Save encoder position to sd card
 {
-  //  getFileName(dataSet);
-  //  Serial.print("SAVE ");
 
-  //Serial.println(fileName);
   if (writeCount == 0)
   {
     myFile = SD.open("encoder.csv", O_CREAT | O_APPEND | O_WRITE);
-
-    //Serial.println("OPEN FILE");
   }
   if (myFile)
   {
