@@ -128,7 +128,7 @@ void setup()
   pinMode(START, INPUT_PULLUP); // Start
   pinMode(STOP, INPUT_PULLUP);  // Stop
 
-  pinMode(BUZZER, INPUT_PULLUP); // Buzzer
+  pinMode(BUZZER, OUTPUT); // Buzzer
 
   // TIMER SETUP- the timer interrupt allows preceise timed measurements of the reed switch
   //for mor info about configuration of arduino timers see http://arduino.cc/playground/Code/Timer1
