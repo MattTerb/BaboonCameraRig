@@ -39,9 +39,9 @@ void index_ISR()
 long lastDebounceTime = 0;
 const int debounceDelay = 500; // ms
 
-const int startBeepFreq = 3500;
-const int stopBeepFreq = 2500;
-const int regularBeepFreq = 2000;
+const int startBeepFreq = 4500;
+const int stopBeepFreq = 3000;
+//const int regularBeepFreq = 3000;
 
 float angle = 0;
 
@@ -52,7 +52,7 @@ char str[20];   // Must hold longest field with delimiter and zero byte.
 char *ptr;      // Test for valid field.
 char delim = 0; // Delimiter from previous line. Start with no delimiter.
 
-const long beepInterval = 200000; // Minimum gap between beeps
+const long beepInterval = 500000; // Minimum gap between beeps
 
 const long regularBeepTime = 10000000; // Beep every 10s
 
@@ -71,7 +71,12 @@ unsigned long durArray[6]; // Used for scheduling beep duration
 unsigned long currentMillis = 0; // stores the value of millis() in each iteration of loop()
 unsigned long previousBeepMillis = 0;
 
+unsigned long currentLedMillis = 0; // stores the value of millis() in each iteration of loop()
+unsigned long previousLedMillis = 0;
+
 unsigned long previousBeepTime = 0;
+
+unsigned long readMicros = 0;
 
 long newPosition;
 
@@ -81,6 +86,22 @@ byte startWriting = LOW;
 
 unsigned int writeCount = 0;
 
+byte ledState = LOW;
+
+byte startSave = LOW;
+
+byte openFile = HIGH;
+
+byte buzzerOn = LOW;
+
+unsigned long beepMicros;
+
+unsigned int startCount = 5;
+
+unsigned int stopCount = 5;
+
+byte stopSaving = LOW;
+byte startSaving = LOW;
 
 // Function Declarations
 void updateBuzzerState();
@@ -149,7 +170,7 @@ void setup()
 
   TCNT1 = 0; //initialize counter value to 0;
   // set timer count for 90hz increments
-  OCR1A = 694; // = (16*10^6) / (90*256) - 1 (693 or 694)
+  OCR1A = 693; // = (16*10^6) / (90*256) - 1 (693 or 694)
   // enable timer compare interrupt
   TIMSK1 |= (1 << OCIE1A);
 
@@ -238,7 +259,9 @@ void loop()
 
   currentMillis = micros();
 
-  unsigned long currentBeepTime = micros();
+  currentLedMillis = micros();
+
+  //unsigned long currentBeepTime = micros();
 
   updateBuzzerState();
 
@@ -246,7 +269,6 @@ void loop()
   {
     resetPos(); // If receive pulse from OUT Z then set position to 0
   }
-
 
   if ((millis() - lastDebounceTime) > debounceDelay)
   {
@@ -257,12 +279,13 @@ void loop()
       Serial.println("START");
       lastDebounceTime = millis();
 
-      beep(startBeepFreq, 500, false);
+      Serial.print("Start Micros: ");
+      Serial.println(micros());
 
       writeToFile = true;
       if (digitalRead(ERROR_LED) == LOW)
       {
-        digitalWrite(DATA_LED, HIGH);
+        //  digitalWrite(DATA_LED, HIGH);
         startDataSet();
       }
     }
@@ -273,35 +296,99 @@ void loop()
       Serial.println("STOP");
       lastDebounceTime = millis();
 
-      writeToFile = false;
+      // digitalWrite(DATA_LED, LOW);
 
-      digitalWrite(DATA_LED, LOW);
+      // Beep order : LIFO
+      beep(stopBeepFreq, 800, false);
+      beep(stopBeepFreq, 400, false);
+      beep(stopBeepFreq, 400, false);
 
-      beep(stopBeepFreq, 550, false);
-      beep(stopBeepFreq, 550, false);
+      // writeToFile = false;
 
-      endDataSet();
+      stopSaving = HIGH;
+      // endDataSet();
+    }
+
+    if (digitalRead(BUZZER) == HIGH)
+    {
+
+      Serial.print("BEEP TIME: ");
+      Serial.println(micros());
     }
   }
 
-  if (currentBeepTime - previousBeepTime >= regularBeepTime)
+  // if (currentBeepTime - previousBeepTime >= regularBeepTime)
+  // {
+
+  //   beep(regularBeepFreq, 400, true);
+  //   // Serial.println("Beep");
+
+  //   previousBeepTime = currentBeepTime;
+  // }
+
+  if (ledState == LOW) // If buzzer is off
   {
 
-    beep(regularBeepFreq, 800, true);
-    // Serial.println("Beep");
+    if (currentLedMillis - previousLedMillis > 500000)
+    {
 
-    previousBeepTime = currentBeepTime;
+      ledState = HIGH;
+      digitalWrite(DATA_LED, HIGH);
+      previousLedMillis = currentLedMillis;
+    }
+  }
+  else
+  {
+
+    if (currentLedMillis - previousLedMillis > 250000)
+    {
+
+      ledState = LOW;
+      digitalWrite(DATA_LED, LOW);
+      previousLedMillis = currentLedMillis;
+    }
   }
 }
 
 ISR(TIMER1_COMPA_vect)
 { //Interrupt at freq of 90Hz to save data to SD
 
-  readEncoder();
-
   if ((writeToFile == true) && (startWriting == HIGH))
   {
+
+    readEncoder();
     saveEncoderData();
+
+    if (startSaving == HIGH)
+    {
+      if (startCount == 0)
+      {
+        beep(startBeepFreq, 300, false);
+        beep(startBeepFreq, 300, false);
+        beep(startBeepFreq, 300, false);
+
+        startSaving = LOW;
+      }
+      else
+      {
+        startCount--;
+      }
+    }
+
+    if (stopSaving == HIGH)
+    {
+      if (stopCount == 0)
+      {
+
+        writeToFile = false;
+        endDataSet();
+        stopSaving = LOW;
+      }
+      else
+      {
+        stopCount--;
+      }
+    }
   }
 }
 
@@ -317,10 +404,15 @@ void updateBuzzerState() // Continously check and update state of buzzer
       if (currentMillis - previousBeepMillis > beepInterval)
       {
 
+        Serial.print(beepCount);
+        Serial.print("Beep Micros: ");
+        Serial.println(micros());
+
+        tone(BUZZER, freqArray[beepCount - 1], durArray[beepCount - 1]); // Play beep
+
         Serial.println("Beep");
 
         buzzerState = HIGH;
-        tone(BUZZER, freqArray[beepCount - 1], durArray[beepCount - 1]); // Play beep
 
         previousBeepMillis = currentMillis;
       }
@@ -383,12 +475,13 @@ void startDataSet() // Save column titles to file
   if (myFile)
   {
     //  Serial.print("Writing to encoder.csv...");
-    myFile.println("Dataset Number,Time,Rotation"); // Write column title to file
+    myFile.println("Dataset Number,Time,LED State, Buzzer State"); // Write column title to file
     // close the file:
     myFile.close();
     //  Serial.println("done.");
 
     startWriting = HIGH;
+    startSaving = HIGH;
   }
   else
   {
@@ -409,6 +502,12 @@ void endDataSet() // Write dataset number to dataset file
 
   writeCount = 0;
   dataSet += 1;
+  startSave = LOW;
+
+  startCount = 5;
+  stopCount = 5;
+
+  openFile = HIGH;
 
   // Write Dataset Number
   myFile = SD.open("dataset.csv", FILE_WRITE);
@@ -432,6 +531,24 @@ void endDataSet() // Write dataset number to dataset file
 void readEncoder() // Read encoder value from encoder and convert to degrees
 {
 
+  if (startSave == LOW)
+  {
+    Serial.print("Pre Read Micros: ");
+    Serial.println(micros());
+  }
+  ledState = digitalRead(DATA_LED);
+
+  buzzerOn = digitalRead(BUZZER);
+
+  readMicros = micros();
+
+  if (startSave == LOW)
+  {
+    Serial.print("Read Micros: ");
+    Serial.println(readMicros);
+    startSave = HIGH;
+  }
+
   newPosition = myEnc.read();
 
   angle = ((newPosition / 4096) * 360) / 3;
@@ -445,17 +562,20 @@ void readEncoder() // Read encoder value from encoder and convert to degrees
 void saveEncoderData() // Save encoder position to sd card
 {
 
-  if (writeCount == 0)
+  if (openFile == HIGH)
   {
     myFile = SD.open("encoder.csv", O_CREAT | O_APPEND | O_WRITE);
+    openFile = LOW;
   }
   if (myFile)
   {
     myFile.print(dataSet);
     myFile.print(',');
-    myFile.print(micros());
+    myFile.print(readMicros);
     myFile.print(',');
-    myFile.println(newPosition);
+    myFile.print(ledState);
+    myFile.print(',');
+    myFile.println(buzzerOn);
 
     writeCount++;
 
@@ -463,7 +583,7 @@ void saveEncoderData() // Save encoder position to sd card
     {
       Serial.println("FLUSH");
       myFile.flush();
-      myFile.close();
+      //  myFile.close();
 
       writeCount = 0;
     }
@@ -471,7 +591,6 @@ void saveEncoderData() // Save encoder position to sd card
   else
   {
     // if the file didn't open, print an error:
-    Serial.print(writeCount);
 
     Serial.println("SAVE error opening encoder.csv");
     digitalWrite(ERROR_LED, HIGH);
