@@ -164,13 +164,13 @@ void setup()
   TCCR1B |= (1 << WGM12);
 
   // Set CS12, C11, C10 bits for 256 prescaler
-  TCCR1B |= (1 << CS12);
-  TCCR1B &= ~(1 << CS11);
+  TCCR1B |= (1 << CS11);
+  TCCR1B &= ~(1 << CS12);
   TCCR1B &= ~(1 << CS10);
 
   TCNT1 = 0; //initialize counter value to 0;
   // set timer count for 90hz increments
-  OCR1A = 693; // = (16*10^6) / (90*256) - 1 (693 or 694)
+  OCR1A = 22221; // = (16*10^6) / (90*256) - 1 (693 or 694)
   // enable timer compare interrupt
   TIMSK1 |= (1 << OCIE1A);
 
