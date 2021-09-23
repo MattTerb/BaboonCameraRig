@@ -20,7 +20,7 @@
 #define STOP 7
 
 #define DATA_LED 8
-#define ERROR_LED 9
+#define SYNC_LED 9
 
 #define CS 10
 
@@ -93,7 +93,8 @@ byte openFile = HIGH;
 unsigned long beepMicros;
 
 byte longFlash = LOW;
-;
+
+byte error = LOW;
 
 unsigned long dur = 250000;
 
@@ -132,13 +133,12 @@ void setup()
 {
 
   pinMode(DATA_LED, OUTPUT);
-  pinMode(ERROR_LED, OUTPUT);
+  pinMode(SYNC_LED, OUTPUT);
 
-  digitalWrite(ERROR_LED, LOW);
+  digitalWrite(SYNC_LED, LOW);
   digitalWrite(DATA_LED, LOW);
 
   pinMode(OUT_Z, INPUT_PULLUP);
-  // pinMode(OUT_Z, OUTPUT);
 
   pinMode(START, INPUT_PULLUP); // Start
   pinMode(STOP, INPUT_PULLUP);  // Stop
@@ -183,7 +183,7 @@ void setup()
   if (!SD.begin(CS))
   {
     //   Serial.println("initialization failed!");
-    digitalWrite(ERROR_LED, HIGH);
+    error = HIGH;
     return;
   }
 
@@ -241,7 +241,7 @@ void setup()
     {
       // if the file didn't open, print an error:
       // Serial.println("error opening dataset.csv");
-      digitalWrite(ERROR_LED, HIGH);
+      error = HIGH;
     }
   }
 
@@ -277,9 +277,9 @@ void loop()
       Serial.println(micros());
 
       writeToFile = true;
-      if (digitalRead(ERROR_LED) == LOW)
+      if (error == LOW)
       {
-        //  digitalWrite(DATA_LED, HIGH);
+        digitalWrite(DATA_LED, HIGH);
         startDataSet();
       }
     }
@@ -290,7 +290,7 @@ void loop()
       Serial.println("STOP");
       lastDebounceTime = millis();
 
-      // digitalWrite(DATA_LED, LOW);
+      digitalWrite(DATA_LED, LOW);
 
       // Beep order : LIFO
       beep(stopBeepFreq, 800, false);
@@ -302,12 +302,6 @@ void loop()
       endDataSet();
     }
 
-    if (digitalRead(BUZZER) == HIGH)
-    {
-
-      Serial.print("BEEP TIME: ");
-      Serial.println(micros());
-    }
   }
 
   // if (currentBeepTime - previousBeepTime >= regularBeepTime)
@@ -324,9 +318,8 @@ void loop()
 
     if (currentLedMillis - previousLedMillis > 500000) // interval
     {
-
       ledState = HIGH;
-      digitalWrite(DATA_LED, HIGH);
+      digitalWrite(SYNC_LED, HIGH);
       previousLedMillis = currentLedMillis;
 
       longFlash = !longFlash;
@@ -334,23 +327,19 @@ void loop()
   }
   else
   {
-
     if (longFlash)
     {
-
       dur = 650000;
     }
     else
     {
-
       dur = 250000;
     }
 
     if (currentLedMillis - previousLedMillis > dur) // duration
     {
-
       ledState = LOW;
-      digitalWrite(DATA_LED, LOW);
+      digitalWrite(SYNC_LED, LOW);
       previousLedMillis = currentLedMillis;
     }
   }
@@ -361,7 +350,6 @@ ISR(TIMER1_COMPA_vect)
 
   if ((writeToFile == true) && (startWriting == HIGH))
   {
-
     readEncoder();
     saveEncoderData();
   }
@@ -379,10 +367,6 @@ void updateBuzzerState() // Continously check and update state of buzzer
       if (currentMillis - previousBeepMillis > beepInterval)
       {
 
-        Serial.print(beepCount);
-        Serial.print("Beep Micros: ");
-        Serial.println(micros());
-
         tone(BUZZER, freqArray[beepCount - 1], durArray[beepCount - 1]); // Play beep
 
         Serial.println("Beep");
@@ -397,8 +381,6 @@ void updateBuzzerState() // Continously check and update state of buzzer
 
       if (currentMillis - previousBeepMillis > durArray[beepCount - 1] * 1000)
       {
-
-        //Serial.println("Beep Off");
 
         buzzerState = LOW;
         beepCount -= 1; // Remove beep from schedule
@@ -466,7 +448,7 @@ void startDataSet() // Save column titles to file
   {
     // if the file didn't open, print an error:
     Serial.println("START error opening encoder.csv");
-    digitalWrite(ERROR_LED, HIGH);
+    error = HIGH;
   }
 }
 
@@ -499,14 +481,14 @@ void endDataSet() // Write dataset number to dataset file
   {
     // if the file didn't open, print an error:
     // Serial.println("error opening dataset.csv");
-    digitalWrite(ERROR_LED, HIGH);
+    error = HIGH;
   }
 }
 
 void readEncoder() // Read encoder value from encoder and convert to degrees
 {
 
-  ledState = digitalRead(DATA_LED);
+  ledState = digitalRead(SYNC_LED);
 
   newPosition = myEnc.read();
 
@@ -552,8 +534,7 @@ void saveEncoderData() // Save encoder position to sd card
   else
   {
     // if the file didn't open, print an error:
-
     Serial.println("SAVE error opening encoder.csv");
-    digitalWrite(ERROR_LED, HIGH);
+    error = HIGH;
   }
 }
