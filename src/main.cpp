@@ -39,8 +39,8 @@ void index_ISR()
 long lastDebounceTime = 0;
 const int debounceDelay = 500; // ms
 
-const int startBeepFreq = 4000;
-const int stopBeepFreq = 4000;
+const int startBeepFreq = 2800;
+const int stopBeepFreq = 2800;
 //const int regularBeepFreq = 3000;
 
 float angle = 0;
