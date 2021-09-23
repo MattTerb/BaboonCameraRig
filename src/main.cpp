@@ -251,6 +251,10 @@ void setup()
 void loop()
 {
 
+  if (error){
+    digitalWrite(SYNC_LED,HIGH);
+  }
+
   currentMillis = micros();
 
   currentLedMillis = micros();
@@ -272,9 +276,6 @@ void loop()
 
       Serial.println("START");
       lastDebounceTime = millis();
-
-      Serial.print("Start Micros: ");
-      Serial.println(micros());
 
       writeToFile = true;
       if (error == LOW)
@@ -414,7 +415,7 @@ void resetPos() // Set position to 0
 
   if ((setOrigin == LOW) || (fullRev == HIGH))
   {
-    // Serial.println("ORIGIN");
+    Serial.println("ORIGIN");
     setOrigin = HIGH;
     fullRev = LOW;
     myEnc.write(0); // Set encoder to 0
