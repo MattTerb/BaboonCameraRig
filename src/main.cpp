@@ -56,8 +56,6 @@ const long beepInterval = 500000; // Minimum gap between beeps
 
 const long regularBeepTime = 10000000; // Beep every 10s
 
-byte buzzerState = LOW;
-
 byte setOrigin = LOW;
 
 byte fullRev = LOW;
@@ -82,31 +80,22 @@ long newPosition;
 
 Encoder myEnc(OUT_A, OUT_B);
 
+byte buzzerState = LOW;
+
 byte startWriting = LOW;
 
 unsigned int writeCount = 0;
 
 byte ledState = LOW;
 
-byte startSave = LOW;
-
 byte openFile = HIGH;
-
-byte buzzerOn = LOW;
 
 unsigned long beepMicros;
 
-unsigned int startCount = 5;
-
-unsigned int stopCount = 5;
-
-byte stopSaving = LOW;
-byte startSaving = LOW;
-
-byte longFlash = LOW;;
+byte longFlash = LOW;
+;
 
 unsigned long dur = 250000;
-
 
 // Function Declarations
 void updateBuzzerState();
@@ -168,14 +157,14 @@ void setup()
   TCCR1B &= ~(1 << WGM13);
   TCCR1B |= (1 << WGM12);
 
-  // Set CS12, C11, C10 bits for 256 prescaler
-  TCCR1B |= (1 << CS11);
+  // Set CS12, C11, C10 bits for 8 prescaler
   TCCR1B &= ~(1 << CS12);
+  TCCR1B |= (1 << CS11);
   TCCR1B &= ~(1 << CS10);
 
   TCNT1 = 0; //initialize counter value to 0;
   // set timer count for 90hz increments
-  OCR1A = 22221; // = (16*10^6) / (90*256) - 1 (693 or 694)
+  OCR1A = 22221; // = (16*10^6) / (90*8) - 1
   // enable timer compare interrupt
   TIMSK1 |= (1 << OCIE1A);
 
@@ -308,10 +297,9 @@ void loop()
       beep(stopBeepFreq, 400, false);
       beep(stopBeepFreq, 400, false);
 
-       writeToFile = false;
+      writeToFile = false;
 
-      stopSaving = HIGH;
-       endDataSet();
+      endDataSet();
     }
 
     if (digitalRead(BUZZER) == HIGH)
@@ -331,8 +319,6 @@ void loop()
   //   previousBeepTime = currentBeepTime;
   // }
 
-  
-
   if (ledState == LOW) // If led is off
   {
 
@@ -349,10 +335,13 @@ void loop()
   else
   {
 
-    if (longFlash){
+    if (longFlash)
+    {
 
       dur = 650000;
-    } else {
+    }
+    else
+    {
 
       dur = 250000;
     }
@@ -375,21 +364,6 @@ ISR(TIMER1_COMPA_vect)
 
     readEncoder();
     saveEncoderData();
-
-    // if (stopSaving == HIGH)
-    // {
-    //   if (stopCount == 0)
-    //   {
-
-    //     writeToFile = false;
-    //     endDataSet();
-    //     stopSaving = LOW;
-    //   }
-    //   else
-    //   {
-    //     stopCount--;
-    //   }
-    // }
   }
 }
 
@@ -481,13 +455,12 @@ void startDataSet() // Save column titles to file
     beep(startBeepFreq, 400, false);
 
     //  Serial.print("Writing to encoder.csv...");
-    myFile.println("Dataset Number,Time,LED State, Buzzer State"); // Write column title to file
+    myFile.println("Dataset Number,Time,Rotation,LED State"); // Write column title to file
     // close the file:
     myFile.close();
     //  Serial.println("done.");
 
     startWriting = HIGH;
-    startSaving = HIGH;
   }
   else
   {
@@ -508,10 +481,6 @@ void endDataSet() // Write dataset number to dataset file
 
   writeCount = 0;
   dataSet += 1;
-  startSave = LOW;
-
-  startCount = 5;
-  stopCount = 5;
 
   openFile = HIGH;
 
@@ -537,25 +506,11 @@ void endDataSet() // Write dataset number to dataset file
 void readEncoder() // Read encoder value from encoder and convert to degrees
 {
 
-  if (startSave == LOW)
-  {
-    Serial.print("Pre Read Micros: ");
-    Serial.println(micros());
-  }
   ledState = digitalRead(DATA_LED);
 
-  buzzerOn = digitalRead(BUZZER);
+  newPosition = myEnc.read();
 
   readMicros = micros();
-
-  if (startSave == LOW)
-  {
-    Serial.print("Read Micros: ");
-    Serial.println(readMicros);
-    startSave = HIGH;
-  }
-
-  newPosition = myEnc.read();
 
   angle = ((newPosition / 4096) * 360) / 3;
 
@@ -579,9 +534,9 @@ void saveEncoderData() // Save encoder position to sd card
     myFile.print(',');
     myFile.print(readMicros);
     myFile.print(',');
-    myFile.print(ledState);
+    myFile.print(newPosition);
     myFile.print(',');
-    myFile.println(buzzerOn);
+    myFile.println(ledState);
 
     writeCount++;
 
