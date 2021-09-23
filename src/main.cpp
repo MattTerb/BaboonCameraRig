@@ -39,8 +39,8 @@ void index_ISR()
 long lastDebounceTime = 0;
 const int debounceDelay = 500; // ms
 
-const int startBeepFreq = 4500;
-const int stopBeepFreq = 3000;
+const int startBeepFreq = 4000;
+const int stopBeepFreq = 4000;
 //const int regularBeepFreq = 3000;
 
 float angle = 0;
@@ -102,6 +102,11 @@ unsigned int stopCount = 5;
 
 byte stopSaving = LOW;
 byte startSaving = LOW;
+
+byte longFlash = LOW;;
+
+unsigned long dur = 250000;
+
 
 // Function Declarations
 void updateBuzzerState();
@@ -303,10 +308,10 @@ void loop()
       beep(stopBeepFreq, 400, false);
       beep(stopBeepFreq, 400, false);
 
-      // writeToFile = false;
+       writeToFile = false;
 
       stopSaving = HIGH;
-      // endDataSet();
+       endDataSet();
     }
 
     if (digitalRead(BUZZER) == HIGH)
@@ -326,21 +331,33 @@ void loop()
   //   previousBeepTime = currentBeepTime;
   // }
 
-  if (ledState == LOW) // If buzzer is off
+  
+
+  if (ledState == LOW) // If led is off
   {
 
-    if (currentLedMillis - previousLedMillis > 500000)
+    if (currentLedMillis - previousLedMillis > 500000) // interval
     {
 
       ledState = HIGH;
       digitalWrite(DATA_LED, HIGH);
       previousLedMillis = currentLedMillis;
+
+      longFlash = !longFlash;
     }
   }
   else
   {
 
-    if (currentLedMillis - previousLedMillis > 250000)
+    if (longFlash){
+
+      dur = 650000;
+    } else {
+
+      dur = 250000;
+    }
+
+    if (currentLedMillis - previousLedMillis > dur) // duration
     {
 
       ledState = LOW;
@@ -359,36 +376,20 @@ ISR(TIMER1_COMPA_vect)
     readEncoder();
     saveEncoderData();
 
-    if (startSaving == HIGH)
-    {
-      if (startCount == 0)
-      {
-        beep(startBeepFreq, 300, false);
-        beep(startBeepFreq, 300, false);
-        beep(startBeepFreq, 300, false);
+    // if (stopSaving == HIGH)
+    // {
+    //   if (stopCount == 0)
+    //   {
 
-        startSaving = LOW;
-      }
-      else
-      {
-        startCount--;
-      }
-    }
-
-    if (stopSaving == HIGH)
-    {
-      if (stopCount == 0)
-      {
-
-        writeToFile = false;
-        endDataSet();
-        stopSaving = LOW;
-      }
-      else
-      {
-        stopCount--;
-      }
-    }
+    //     writeToFile = false;
+    //     endDataSet();
+    //     stopSaving = LOW;
+    //   }
+    //   else
+    //   {
+    //     stopCount--;
+    //   }
+    // }
   }
 }
 
@@ -474,6 +475,11 @@ void startDataSet() // Save column titles to file
   myFile = SD.open("encoder.csv", FILE_WRITE);
   if (myFile)
   {
+
+    beep(startBeepFreq, 400, false);
+    beep(startBeepFreq, 400, false);
+    beep(startBeepFreq, 400, false);
+
     //  Serial.print("Writing to encoder.csv...");
     myFile.println("Dataset Number,Time,LED State, Buzzer State"); // Write column title to file
     // close the file:
