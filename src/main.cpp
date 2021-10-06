@@ -149,7 +149,7 @@ void setup()
   //for mor info about configuration of arduino timers see http://arduino.cc/playground/Code/Timer1
   //cli(); //stop interrupts
 
-  //set timer1 interrupt at 90Hz
+  //set timer1 interrupt at 60Hz
   TCCR1A = 0; // set entire TCCR1A register to 0
   TCCR1B = 0; // same for TCCR1B
 
@@ -163,8 +163,8 @@ void setup()
   TCCR1B &= ~(1 << CS10);
 
   TCNT1 = 0; //initialize counter value to 0;
-  // set timer count for 90hz increments
-  OCR1A = 22221; // = (16*10^6) / (90*8) - 1
+  // set timer count for 60hz increments
+  OCR1A = 33332; // = (16*10^6) / (60*8) - 1
   // enable timer compare interrupt
   TIMSK1 |= (1 << OCIE1A);
 
